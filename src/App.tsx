@@ -1,8 +1,8 @@
-import { useRef } from "react";
+import { useRef, MouseEvent } from "react";
 function App() {
   return (
     <>
-      <h1>React Canvas お絵かきエディタ</h1>
+      <h1>oekaki</h1>
       <CanvasEditor />
     </>
   );
@@ -10,15 +10,16 @@ function App() {
 
 const CanvasEditor = () => {
   // canvas 要素の参照を保持するための useRef
-  const canvasRef = useRef(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   // 描画中かどうかを管理するためのフラグ
   const isDrawingRef = useRef(false);
   // 前回のマウス座標を保持するための ref
   const lastPointRef = useRef({ x: 0, y: 0 });
 
   // マウスを押し始めたときの処理
-  const handleMouseDown = (e) => {
+  const handleMouseDown = (e: MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
+    if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
     // キャンバス上での座標を計算
     lastPointRef.current = {
@@ -29,11 +30,13 @@ const CanvasEditor = () => {
   };
 
   // マウスを動かしたときの処理
-  const handleMouseMove = (e) => {
+  const handleMouseMove = (e: MouseEvent<HTMLCanvasElement>) => {
     if (!isDrawingRef.current) return; // 描画中でなければ何もしない
 
     const canvas = canvasRef.current;
+    if (!canvas) return;
     const ctx = canvas.getContext("2d");
+    if (!ctx) return;
     const rect = canvas.getBoundingClientRect();
     const currentPoint = {
       x: e.clientX - rect.left,
