@@ -12,6 +12,7 @@
   "dependencies": {
     "gyazo-api-ts": "0.1.4",
     "jotai": "2.11.3",
+    "jotai-effect": "1.1.6",
     "jotai-location": "0.5.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
