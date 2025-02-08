@@ -18,7 +18,6 @@ const shortCutEffect = atomEffect((get) => {
   // command + c
   if (event.metaKey && event.key === "c") {
     const canvas = get(canvasAtom);
-    if (!canvas) return;
     copyCanvas(canvas);
   }
 });
