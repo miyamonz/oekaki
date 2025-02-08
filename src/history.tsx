@@ -13,7 +13,7 @@ function useCurrentHistoryIndex() {
 export function useSaveToHistory(
   canvasRef: React.RefObject<HTMLCanvasElement | null>
 ) {
-  const [history, setHistory] = useHistory();
+  const [, setHistory] = useHistory();
   const [currentHistoryIndex, setCurrentHistoryIndex] =
     useCurrentHistoryIndex();
   const currentHistoryIndexRef = useRef(currentHistoryIndex);
@@ -42,7 +42,7 @@ export function useSaveToHistory(
     });
   }, [canvasRef, setCurrentHistoryIndex, setHistory]);
 }
-expot function useRestoreFromHistory(
+export function useRestoreFromHistory(
   canvasRef: React.RefObject<HTMLCanvasElement | null>
 ) {
   const [history] = useHistory();
@@ -59,20 +59,19 @@ expot function useRestoreFromHistory(
   );
 }
 
+// const saveToHistory = useSaveToHistory(canvasRef);
 
-  // const saveToHistory = useSaveToHistory(canvasRef);
+// const restoreFromHistory = useRestoreFromHistory(canvasRef);
 
-  // const restoreFromHistory = useRestoreFromHistory(canvasRef);
+// const [currentHistoryIndex] = useCurrentHistoryIndex();
+// // Undo処理
+// const handleUndo = useCallback(() => {
+//   if (currentHistoryIndex <= 0) return;
+//   restoreFromHistory(currentHistoryIndex - 1);
+// }, [currentHistoryIndex, restoreFromHistory]);
 
-  // const [currentHistoryIndex] = useCurrentHistoryIndex();
-  // // Undo処理
-  // const handleUndo = useCallback(() => {
-  //   if (currentHistoryIndex <= 0) return;
-  //   restoreFromHistory(currentHistoryIndex - 1);
-  // }, [currentHistoryIndex, restoreFromHistory]);
-
-  // // Redo処理
-  // const handleRedo = useCallback(() => {
-  //   if (currentHistoryIndex >= history.length - 1) return;
-  //   restoreFromHistory(currentHistoryIndex + 1);
-  // }, [currentHistoryIndex, restoreFromHistory]);
+// // Redo処理
+// const handleRedo = useCallback(() => {
+//   if (currentHistoryIndex >= history.length - 1) return;
+//   restoreFromHistory(currentHistoryIndex + 1);
+// }, [currentHistoryIndex, restoreFromHistory]);
