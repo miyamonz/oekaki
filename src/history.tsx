@@ -1,77 +1,58 @@
-import { atom, useAtom } from "jotai";
-import { useRef, useEffect, useCallback } from "react";
+import { atom } from "jotai";
+import { canvasAtom } from "./CanvasEditor";
 
-const MAX_HISTORY = 10;
-const historyAtom = atom<ImageData[]>([]);
-function useHistory() {
-  return useAtom(historyAtom);
-}
-const currentHistoryIndexAtom = atom<number>(0);
-function useCurrentHistoryIndex() {
-  return useAtom(currentHistoryIndexAtom);
-}
-export function useSaveToHistory(
-  canvasRef: React.RefObject<HTMLCanvasElement | null>
-) {
-  const [, setHistory] = useHistory();
-  const [currentHistoryIndex, setCurrentHistoryIndex] =
-    useCurrentHistoryIndex();
-  const currentHistoryIndexRef = useRef(currentHistoryIndex);
-  useEffect(() => {
-    currentHistoryIndexRef.current = currentHistoryIndex;
-  }, [currentHistoryIndex]);
-  // キャンバスの状態を履歴に保存
-  return useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+const MAX_HISTORY = 30;
+const historyStackAtom = atom<ImageData[]>([]);
+const historyIndexAtom = atom(-1);
 
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+export const canUndoAtom = atom((get) => get(historyIndexAtom) > 0);
+export const canRedoAtom = atom(
+  (get) => get(historyIndexAtom) < get(historyStackAtom).length - 1
+);
 
-    setHistory((prev) => {
-      const newHistory = prev.slice(0, currentHistoryIndexRef.current + 1);
-      const updatedHistory = [...newHistory, imageData];
-      if (updatedHistory.length > MAX_HISTORY) {
-        updatedHistory.shift();
-        setCurrentHistoryIndex(MAX_HISTORY - 2);
-      } else {
-        setCurrentHistoryIndex(updatedHistory.length - 1);
-      }
-      return updatedHistory;
-    });
-  }, [canvasRef, setCurrentHistoryIndex, setHistory]);
-}
-export function useRestoreFromHistory(
-  canvasRef: React.RefObject<HTMLCanvasElement | null>
-) {
-  const [history] = useHistory();
-  return useCallback(
-    (index: number) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.putImageData(history[index], 0, 0);
-    },
-    [history, canvasRef]
-  );
-}
+export const saveToHistoryAtom = atom(null, (get, set) => {
+  const canvas = get(canvasAtom);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
 
-// const saveToHistory = useSaveToHistory(canvasRef);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const currentIndex = get(historyIndexAtom);
+  const stack = get(historyStackAtom);
 
-// const restoreFromHistory = useRestoreFromHistory(canvasRef);
+  // 現在位置より先の履歴を切り捨て
+  const newStack = [...stack.slice(0, currentIndex + 1), imageData];
 
-// const [currentHistoryIndex] = useCurrentHistoryIndex();
-// // Undo処理
-// const handleUndo = useCallback(() => {
-//   if (currentHistoryIndex <= 0) return;
-//   restoreFromHistory(currentHistoryIndex - 1);
-// }, [currentHistoryIndex, restoreFromHistory]);
+  // MAX_HISTORY を超えたら古いものを削除
+  if (newStack.length > MAX_HISTORY) {
+    newStack.shift();
+    set(historyStackAtom, newStack);
+    set(historyIndexAtom, newStack.length - 1);
+  } else {
+    set(historyStackAtom, newStack);
+    set(historyIndexAtom, newStack.length - 1);
+  }
+});
 
-// // Redo処理
-// const handleRedo = useCallback(() => {
-//   if (currentHistoryIndex >= history.length - 1) return;
-//   restoreFromHistory(currentHistoryIndex + 1);
-// }, [currentHistoryIndex, restoreFromHistory]);
+export const undoAtom = atom(null, (get, set) => {
+  if (!get(canUndoAtom)) return;
+  const canvas = get(canvasAtom);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  const newIndex = get(historyIndexAtom) - 1;
+  const stack = get(historyStackAtom);
+  ctx.putImageData(stack[newIndex], 0, 0);
+  set(historyIndexAtom, newIndex);
+});
+
+export const redoAtom = atom(null, (get, set) => {
+  if (!get(canRedoAtom)) return;
+  const canvas = get(canvasAtom);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  const newIndex = get(historyIndexAtom) + 1;
+  const stack = get(historyStackAtom);
+  ctx.putImageData(stack[newIndex], 0, 0);
+  set(historyIndexAtom, newIndex);
+});

@@ -1,6 +1,7 @@
 import { atom, useSetAtom, useAtomValue } from "jotai";
 import { atomEffect } from "jotai-effect";
-import { canvasAtom, colorAtom, lineWidthAtom } from "./CanvasEditor";
+import { canvasAtom, colorAtom, lineWidthAtom, toolAtom } from "./CanvasEditor";
+import { saveToHistoryAtom } from "./history";
 
 export function useSubscribeMouseEvent() {
   const setMouseEvent = useSetAtom(mouseEventAtom);
@@ -13,13 +14,12 @@ const mouseEventAtom = atom<React.MouseEvent<HTMLCanvasElement> | null>(null);
 const drawEffect = atomEffect((get, set) => {
   const event = get(mouseEventAtom);
   if (!event) return;
-  //   console.log(event);
 
   const canvas = get(canvasAtom);
+  const tool = get(toolAtom);
 
   switch (event.type) {
     case "pointerdown": {
-      set(isDrawingAtom, true);
       set(isDrawingAtom, true);
       const point = getPoint(canvas, event);
       set(lastPointAtom, point);
@@ -33,22 +33,37 @@ const drawEffect = atomEffect((get, set) => {
       const currentPoint = getPoint(canvas, event);
       const lastPoint = get(lastPointAtom);
 
-      const color = get(colorAtom);
-      ctx.strokeStyle = color;
+      if (tool === "eraser") {
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.strokeStyle = "rgba(0,0,0,1)";
+      } else {
+        ctx.globalCompositeOperation = "source-over";
+        const color = get(colorAtom);
+        ctx.strokeStyle = color;
+      }
 
       const lineWidth = get(lineWidthAtom);
       ctx.lineWidth = lineWidth;
       stroke(ctx, lastPoint, currentPoint);
 
+      // compositeOperation をリセット
+      ctx.globalCompositeOperation = "source-over";
+
       set(lastPointAtom, currentPoint);
       break;
     }
     case "pointerup": {
-      set(isDrawingAtom, false);
+      if (get(isDrawingAtom)) {
+        set(isDrawingAtom, false);
+        set(saveToHistoryAtom);
+      }
       break;
     }
     case "pointerleave": {
-      set(isDrawingAtom, false);
+      if (get(isDrawingAtom)) {
+        set(isDrawingAtom, false);
+        set(saveToHistoryAtom);
+      }
       break;
     }
   }
@@ -71,8 +86,9 @@ function getPoint(
 }
 
 function stroke(ctx: CanvasRenderingContext2D, from: Point, to: Point) {
-  // 前回の座標から現在の座標まで線を描画
   ctx.beginPath();
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
   ctx.moveTo(from.x, from.y);
   ctx.lineTo(to.x, to.y);
   ctx.stroke();

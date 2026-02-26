@@ -2,20 +2,31 @@ import { atom, useAtomValue } from "jotai";
 import { atomEffect } from "jotai-effect";
 import { canvasAtom } from "./CanvasEditor";
 import { copyCanvas } from "./utils/copyCanvas";
+import { undoAtom, redoAtom } from "./history";
 
 const shortCutAtom = atom<KeyboardEvent | null>(null);
 shortCutAtom.onMount = (set) => {
-  document.addEventListener("keydown", (e) => {
-    set(e);
-  });
+  const handler = (e: KeyboardEvent) => set(e);
+  document.addEventListener("keydown", handler);
+  return () => document.removeEventListener("keydown", handler);
 };
-const shortCutEffect = atomEffect((get) => {
+
+const shortCutEffect = atomEffect((get, set) => {
   const event = get(shortCutAtom);
   if (!event) return;
-  //console.log(event);
 
-  // hooks呼び出し側が判断する仕組みのほうがいい気がする
-  // command + c
+  // Cmd+Z: Undo, Cmd+Shift+Z: Redo
+  if (event.metaKey && event.key === "z") {
+    event.preventDefault();
+    if (event.shiftKey) {
+      set(redoAtom);
+    } else {
+      set(undoAtom);
+    }
+    return;
+  }
+
+  // Cmd+C: Copy canvas
   if (event.metaKey && event.key === "c") {
     const canvas = get(canvasAtom);
     copyCanvas(canvas);
