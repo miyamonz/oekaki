@@ -6,6 +6,7 @@ export const copyCanvas = async (canvas: HTMLCanvasElement) => {
     // Create ClipboardItem and write to clipboard
     const item = new ClipboardItem({ "image/png": blob });
     await navigator.clipboard.write([item]);
+    //alert("Copied image to clipboard");
   } catch (err) {
     console.error("Failed to copy:", err);
     alert("Failed to copy image to clipboard");
