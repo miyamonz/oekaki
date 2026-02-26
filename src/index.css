@@ -312,3 +312,23 @@ body {
   color: #fff;
   border-color: #2a7d4f;
 }
+
+.bottom-bar .save-btn {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+}
+
+.bottom-bar .save-btn:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.loading-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: var(--text-dim);
+  font-size: 1.1rem;
+}

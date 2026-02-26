@@ -12,7 +12,7 @@ export const copyCanvas = async (canvas: HTMLCanvasElement) => {
     alert("Failed to copy image to clipboard");
   }
 };
-function canvasToBlob(canvas: HTMLCanvasElement) {
+export function canvasToBlob(canvas: HTMLCanvasElement) {
   return new Promise<Blob>((resolve) => {
     canvas.toBlob((blob) => {
       if (blob) resolve(blob);

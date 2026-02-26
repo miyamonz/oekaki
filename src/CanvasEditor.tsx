@@ -1,9 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { atom, useAtom, useAtomValue, useSetAtom } from "jotai";
 import { atomEffect } from "jotai-effect";
-import { useSubscribeArrayBufferEvent } from "./arrayBufferEffect";
+import { useSubscribeMessageEvent, useDrawPendingImage, waitingForImageAtom } from "./arrayBufferEffect";
 import { useShortcut } from "./shortcut";
-import { copyCanvas } from "./utils/copyCanvas";
+import { copyCanvas, canvasToBlob } from "./utils/copyCanvas";
 import { useSubscribeMouseEvent } from "./mouseEvent";
 import {
   canUndoAtom,
@@ -57,9 +57,26 @@ const canvasSizeEffect = atomEffect((get) => {
 
 
 export const CanvasEditor = () => {
+  useSubscribeMessageEvent();
+  const waiting = useAtomValue(waitingForImageAtom);
+
+  useEffect(() => {
+    if (window.opener) {
+      window.opener.postMessage({ type: "oekaki:ready" }, "*");
+    }
+  }, []);
+
+  if (waiting) {
+    return <div className="loading-overlay">Loading...</div>;
+  }
+
+  return <CanvasEditorInner />;
+};
+
+const CanvasEditorInner = () => {
   useAtomValue(canvasSizeEffect);
   useShortcut();
-  useSubscribeArrayBufferEvent();
+  useDrawPendingImage();
 
   return (
     <>
@@ -288,7 +305,6 @@ function Canvas() {
   const setCanvas = useSetAtom(canvasRawAtom);
   useAtomValue(canvasSizeEffect);
   useShortcut();
-  useSubscribeArrayBufferEvent();
 
   const setMouseEvent = useSubscribeMouseEvent();
   const lineWidth = useAtomValue(lineWidthAtom);
@@ -416,7 +432,51 @@ export function CopyButton() {
       >
         {copied ? "Copied!" : "Copy to Clipboard"}
       </button>
+      <SendToOpenerButton />
     </div>
+  );
+}
+
+type SendState = "idle" | "sending" | "done";
+
+function SendToOpenerButton() {
+  const canvas = useAtomValue(canvasRawAtom);
+  const [state, setState] = useState<SendState>("idle");
+  const [hasOpener, setHasOpener] = useState(false);
+
+  useEffect(() => {
+    setHasOpener(!!window.opener);
+  }, []);
+
+  useEffect(() => {
+    if (state !== "sending") return;
+    const handler = (event: MessageEvent) => {
+      if (event.data?.type !== "oekaki:upload-complete") return;
+      setState("done");
+      window.close();
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, [state]);
+
+  if (!hasOpener) return null;
+
+  const label = { idle: "Save to Cosense", sending: "Saving...", done: "Done!" }[state];
+
+  return (
+    <button
+      className={`tool-btn save-btn ${state === "done" ? "copied" : ""}`}
+      disabled={state !== "idle"}
+      onClick={async () => {
+        if (!canvas) return;
+        setState("sending");
+        const blob = await canvasToBlob(canvas);
+        const buffer = await blob.arrayBuffer();
+        window.opener.postMessage({ type: "oekaki:image", data: buffer }, "*", [buffer]);
+      }}
+    >
+      {label}
+    </button>
   );
 }
 
